@@ -19,7 +19,6 @@ import auth_store
 import config
 import paths
 from http_client import eastmoney_get
-from screener import run_screening
 
 # 日志/报告写到 exe 同目录
 config.OUTPUT_DIR = os.path.join(paths.app_dir(), "output")
@@ -138,6 +137,8 @@ def _progress_cb(msg: str, extra: dict) -> None:
 
 def _run_job() -> None:
     global _state
+    from screener import run_screening
+
     started = time.perf_counter()
     finished_at = ""
     try:
