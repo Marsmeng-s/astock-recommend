@@ -257,6 +257,16 @@ def set_enabled(username: str, enabled: bool) -> bool:
         return cur.rowcount > 0
 
 
+def set_password(username: str, password: str) -> bool:
+    with _lock:
+        cur = _connect().execute(
+            "UPDATE users SET password_hash = ? WHERE username = ?",
+            (generate_password_hash(password), username),
+        )
+        _connect().commit()
+        return cur.rowcount > 0
+
+
 def verify_admin(username: str, password: str) -> bool:
     return (
         username == config.ADMIN_USERNAME

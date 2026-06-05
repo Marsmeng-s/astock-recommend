@@ -373,6 +373,30 @@ def api_admin_toggle():
     return jsonify({"ok": True, "msg": f"已{'启用' if enabled else '禁用'} {username}"})
 
 
+@app.route("/api/admin/user/password", methods=["POST"])
+@admin_required
+def api_admin_password():
+    import secrets
+    import string
+
+    data = request.get_json(silent=True) or {}
+    username = (data.get("username") or "").strip()
+    password = (data.get("password") or "").strip()
+    if not username:
+        return jsonify({"ok": False, "msg": "参数无效"})
+    if not password:
+        chars = string.ascii_letters + string.digits
+        password = "".join(secrets.choice(chars) for _ in range(8))
+    if not auth_store.set_password(username, password):
+        return jsonify({"ok": False, "msg": "账号不存在"})
+    return jsonify({
+        "ok": True,
+        "msg": f"已重置 {username} 的密码",
+        "username": username,
+        "password": password,
+    })
+
+
 def main() -> None:
     ip = _local_ip()
     print("=" * 52)

@@ -142,6 +142,7 @@
             <button class="btn btn-sm btn-primary" onclick="extendUser('${u.username}',30)">+30天</button>
             <button class="btn btn-sm btn-secondary" onclick="setExpire('${u.username}')">设到期</button>
             <button class="btn btn-sm btn-secondary" onclick="resetUser('${u.username}')">重置激活</button>
+            <button class="btn btn-sm btn-secondary" onclick="changePassword('${u.username}')">改密码</button>
             <button class="btn btn-sm btn-danger" onclick="toggleUser('${u.username}',${u.enabled?0:1})">${u.enabled?'禁用':'启用'}</button>
           </td>
         </tr>`).join('');
@@ -178,6 +179,20 @@
       const d = await r.json();
       showMsg(d.msg, d.ok);
       if (d.ok) loadUsers();
+    }
+
+    async function changePassword(username) {
+      const val = prompt(`为 ${username} 设置新密码（留空则自动生成 8 位）`, '');
+      if (val === null) return;
+      const r = await fetch('/api/admin/user/password', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password: val }),
+      });
+      const d = await r.json();
+      if (d.ok && d.password) {
+        alert(`新密码已设置\n账号: ${d.username}\n密码: ${d.password}\n请复制保存`);
+      }
+      showMsg(d.msg, d.ok);
     }
 
     async function toggleUser(username, enabled) {
