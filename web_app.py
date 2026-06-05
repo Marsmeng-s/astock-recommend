@@ -59,6 +59,17 @@ _accounts_file = auth_store.init_database()
 if _accounts_file:
     print(f"[AUTH] 已生成 {config.INITIAL_ACCOUNT_COUNT} 个账号: {_accounts_file}", flush=True)
 
+
+def _warmup_screener() -> None:
+    try:
+        import screener  # noqa: F401
+        print("[WARMUP] 分析模块已预加载", flush=True)
+    except Exception as e:
+        print(f"[WARMUP] 预加载失败: {e}", flush=True)
+
+
+threading.Thread(target=_warmup_screener, daemon=True).start()
+
 _state = {
     "running": False,
     "message": "就绪，点击开始检索",
@@ -137,8 +148,13 @@ def _progress_cb(msg: str, extra: dict) -> None:
 
 def _run_job() -> None:
     global _state
+    with _lock:
+        _state["message"] = "正在加载分析模块..."
+        _state["progress"].append({"text": "正在加载分析模块..."})
+
     from screener import run_screening
 
+    _progress_cb("开始检索，连接东方财富...", {"step": 0})
     started = time.perf_counter()
     finished_at = ""
     try:
@@ -164,9 +180,12 @@ def _run_job() -> None:
             )
     except Exception as e:
         elapsed = time.perf_counter() - started
+        hint = ""
+        if config.IS_CLOUD:
+            hint = "（云端服务器在国外，可能无法访问东方财富，建议电脑运行本地版）"
         with _lock:
             _state["error"] = str(e)
-            _state["message"] = f"检索失败: {e}（用时 {_format_duration(elapsed)}）"
+            _state["message"] = f"检索失败: {e}{hint}（用时 {_format_duration(elapsed)}）"
             _state["progress"].append({"text": traceback.format_exc(), "error": True})
     finally:
         with _lock:
@@ -189,6 +208,7 @@ def _render_app():
         port=config.WEB_PORT,
         app_version=config.APP_VERSION,
         user=user,
+        is_cloud=config.IS_CLOUD,
     )
 
 

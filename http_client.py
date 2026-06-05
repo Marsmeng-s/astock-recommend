@@ -50,11 +50,12 @@ def _get_session() -> requests.Session:
 def eastmoney_get(
     path: str,
     params: dict[str, Any],
-    timeout: int = 20,
+    timeout: int | None = None,
     retries: int | None = None,
     hosts: list[str] | None = None,
 ) -> dict:
     """GET 东方财富 API，自动轮换节点并重试"""
+    timeout = timeout or config.API_TIMEOUT
     retries = retries or config.API_RETRY_COUNT
     host_list = list(hosts or EASTMONEY_HOSTS)
     random.shuffle(host_list)

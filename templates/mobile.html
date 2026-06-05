@@ -188,6 +188,7 @@
   <div class="tip">
     <strong>操作建议</strong>
     {{ trade_tip }}。{{ screen_tip }}。
+    {% if is_cloud %}<br><span style="opacity:.9">云端在国外，若检索卡住请先点「测试连接」。连不上请改用电脑本地版。</span>{% endif %}
   </div>
 
   <div class="actions">
@@ -211,6 +212,8 @@
 
   <script>
     let polling = null;
+    let watchdog = null;
+    const fetchOpts = { credentials: 'same-origin' };
 
     function authRedirect(r, d) {
       if (r.status === 401 || (d && d.auth === false)) {
@@ -271,7 +274,11 @@
 
     async function poll() {
       try {
-        const r = await fetch('/api/status');
+        const r = await fetch('/api/status', fetchOpts);
+        if (!r.ok && r.status !== 401) {
+          setStatus(`服务响应异常(${r.status})，请稍后刷新`);
+          return;
+        }
         const s = await r.json();
         if (authRedirect(r, s)) return;
         setStatus(s.message, s.running);
@@ -280,6 +287,7 @@
         if (!s.running) {
           clearInterval(polling);
           polling = null;
+          if (watchdog) { clearInterval(watchdog); watchdog = null; }
           document.getElementById('btnStart').disabled = false;
         }
       } catch (e) {
@@ -291,21 +299,31 @@
       document.getElementById('btnStart').disabled = true;
       document.getElementById('results').innerHTML = '';
       setStatus('正在启动...', true);
+      const t0 = Date.now();
+      if (watchdog) clearInterval(watchdog);
+      watchdog = setInterval(() => {
+        if (!document.getElementById('btnStart').disabled) return;
+        if (Date.now() - t0 > 60000) {
+          setStatus('检索较慢。若长时间无进展，请先点「测试连接」；云端可能连不上东方财富', true);
+        }
+      }, 15000);
       try {
-        const r = await fetch('/api/start', { method: 'POST' });
+        const r = await fetch('/api/start', { method: 'POST', ...fetchOpts });
         const d = await r.json();
         if (authRedirect(r, d)) return;
         if (!d.ok) {
           setStatus(d.msg);
           document.getElementById('btnStart').disabled = false;
+          if (watchdog) { clearInterval(watchdog); watchdog = null; }
           return;
         }
         if (polling) clearInterval(polling);
-        polling = setInterval(poll, 1200);
+        polling = setInterval(poll, 800);
         poll();
       } catch (e) {
         setStatus('启动失败，请检查网络');
         document.getElementById('btnStart').disabled = false;
+        if (watchdog) { clearInterval(watchdog); watchdog = null; }
       }
     }
 
@@ -313,7 +331,7 @@
       document.getElementById('btnNet').disabled = true;
       setStatus('测试连接...', true);
       try {
-        const r = await fetch('/api/network');
+        const r = await fetch('/api/network', fetchOpts);
         const d = await r.json();
         if (authRedirect(r, d)) return;
         setStatus(d.ok ? '✓ ' + d.msg : '✗ ' + d.msg);

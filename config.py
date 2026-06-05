@@ -9,7 +9,7 @@ MIN_CHANGE_PCT = 0.0
 MIN_STOCK_PRICE = 10.0   # 股价不低于 10 元
 
 # 页面版本号（便于确认是否加载最新代码）
-APP_VERSION = "20250605-4"
+APP_VERSION = "20250606-1"
 
 # 涨速初筛：只取前 20 只，不符合则刷新重筛
 TOP_BY_SPEED = 20
@@ -37,8 +37,15 @@ FINAL_RECOMMEND_COUNT = 2
 REQUIRE_POSITIVE_FLOW = True
 
 # API 重试（东方财富直连，多节点轮换）
-API_RETRY_COUNT = 5
-API_RETRY_DELAY = 2
+IS_CLOUD = os.environ.get("RENDER") == "true" or os.environ.get("MOBILE_ONLY") == "1"
+API_RETRY_COUNT = 2 if IS_CLOUD else 5
+API_RETRY_DELAY = 1 if IS_CLOUD else 2
+API_TIMEOUT = 8 if IS_CLOUD else 20
+
+if IS_CLOUD:
+    MAX_REFRESH_ROUNDS = 2
+    MAX_SCREENING_SECONDS = 300
+    DAILY_HISTORY_WORKERS = 4
 
 # Web 服务（0.0.0.0 = 允许任意网络访问，不限局域网）
 WEB_HOST = "0.0.0.0"
