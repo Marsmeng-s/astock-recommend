@@ -1,0 +1,10 @@
+{
+  "name": "A股智能推荐",
+  "short_name": "股推荐",
+  "description": "A股智能推荐手机版",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f1419",
+  "theme_color": "#0f1419",
+  "orientation": "portrait"
+}

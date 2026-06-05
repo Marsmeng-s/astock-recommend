@@ -1,0 +1,20 @@
+# 构建与输出
+dist/
+build/
+output/
+logs/
+*.egg-info/
+
+# 账号数据（含密码，勿上传）
+data/
+initial_accounts.txt
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# 系统
+.DS_Store
+Thumbs.db

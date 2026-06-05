@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>账号管理后台</title>
+  <style>
+    :root {
+      --bg: #0f1419; --card: #1a2332; --accent: #3b82f6; --accent2: #10b981;
+      --text: #e2e8f0; --muted: #94a3b8; --border: #2d3a4f; --warn: #f59e0b; --danger: #ef4444;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; background: var(--bg); color: var(--text); padding: 20px; }
+    .wrap { max-width: 1100px; margin: 0 auto; }
+    h1 { font-size: 1.4rem; margin-bottom: 6px; }
+    .sub { color: var(--muted); font-size: 0.88rem; margin-bottom: 20px; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 16px; }
+    input, select {
+      padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px;
+      background: var(--bg); color: var(--text); font-size: 0.9rem;
+    }
+    .btn {
+      padding: 10px 16px; border: none; border-radius: 8px; cursor: pointer;
+      font-size: 0.88rem; font-weight: 600; margin-right: 6px; margin-top: 6px;
+    }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-secondary { background: var(--border); color: var(--text); }
+    .btn-danger { background: var(--danger); color: #fff; }
+    .btn-sm { padding: 6px 10px; font-size: 0.78rem; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.82rem; margin-top: 12px; }
+    th, td { padding: 10px 8px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: middle; }
+    th { color: var(--muted); font-weight: 600; }
+    .tag { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 0.72rem; }
+    .tag-ok { background: rgba(16,185,129,.15); color: var(--accent2); }
+    .tag-warn { background: rgba(245,158,11,.15); color: var(--warn); }
+    .tag-bad { background: rgba(239,68,68,.15); color: #fca5a5; }
+    .login-grid { display: grid; gap: 12px; max-width: 360px; }
+    .login-grid input { width: 100%; }
+    .toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
+    .msg { padding: 10px; border-radius: 8px; margin-bottom: 12px; display: none; }
+    .msg-ok { background: rgba(16,185,129,.12); color: var(--accent2); }
+    .msg-err { background: rgba(239,68,68,.12); color: #fca5a5; }
+    @media (max-width: 768px) {
+      table { font-size: 0.75rem; }
+      th:nth-child(4), td:nth-child(4), th:nth-child(5), td:nth-child(5) { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>账号管理后台</h1>
+    <p class="sub">管理用户有效期 · <a href="/" style="color:var(--accent)">返回首页</a></p>
+    <div class="msg" id="msgBox"></div>
+
+    <div class="card" id="loginCard">
+      <h2 style="font-size:1rem;margin-bottom:12px;">管理员登录</h2>
+      <div class="login-grid">
+        <input id="adminUser" placeholder="管理员账号" value="admin">
+        <input id="adminPass" type="password" placeholder="管理员密码">
+        <button class="btn btn-primary" onclick="adminLogin()">登录后台</button>
+      </div>
+    </div>
+
+    <div class="card" id="panelCard" style="display:none;">
+      <div class="toolbar">
+        <button class="btn btn-secondary" onclick="adminLogout()">退出管理</button>
+        <button class="btn btn-primary" onclick="loadUsers()">刷新列表</button>
+        <span style="color:var(--muted);font-size:0.85rem;" id="userCount"></span>
+      </div>
+      <div style="overflow-x:auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>账号</th><th>状态</th><th>首次登录</th><th>到期时间</th><th>最后登录</th><th>操作</th>
+            </tr>
+          </thead>
+          <tbody id="userTable"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showMsg(text, ok) {
+      const el = document.getElementById('msgBox');
+      el.textContent = text;
+      el.className = 'msg ' + (ok ? 'msg-ok' : 'msg-err');
+      el.style.display = 'block';
+      setTimeout(() => { el.style.display = 'none'; }, 3500);
+    }
+
+    function statusTag(s) {
+      if (s === '有效') return '<span class="tag tag-ok">有效</span>';
+      if (s === '未激活') return '<span class="tag tag-warn">未激活</span>';
+      if (s === '已过期') return '<span class="tag tag-bad">已过期</span>';
+      return '<span class="tag tag-bad">已禁用</span>';
+    }
+
+    async function adminLogin() {
+      const r = await fetch('/api/admin/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: document.getElementById('adminUser').value.trim(),
+          password: document.getElementById('adminPass').value,
+        }),
+      });
+      const d = await r.json();
+      if (!d.ok) { showMsg(d.msg, false); return; }
+      document.getElementById('loginCard').style.display = 'none';
+      document.getElementById('panelCard').style.display = 'block';
+      loadUsers();
+    }
+
+    async function adminLogout() {
+      await fetch('/api/admin/logout', { method: 'POST' });
+      document.getElementById('loginCard').style.display = 'block';
+      document.getElementById('panelCard').style.display = 'none';
+    }
+
+    async function loadUsers() {
+      const r = await fetch('/api/admin/users');
+      const d = await r.json();
+      if (!d.ok) {
+        if (d.auth === false) {
+          document.getElementById('loginCard').style.display = 'block';
+          document.getElementById('panelCard').style.display = 'none';
+        }
+        showMsg(d.msg || '加载失败', false);
+        return;
+      }
+      document.getElementById('userCount').textContent = `共 ${d.users.length} 个账号`;
+      document.getElementById('userTable').innerHTML = d.users.map(u => `
+        <tr>
+          <td><strong>${u.username}</strong></td>
+          <td>${statusTag(u.status)}</td>
+          <td>${u.first_login_at || '-'}</td>
+          <td>${u.expires_at || '-'}</td>
+          <td>${u.last_login_at || '-'}</td>
+          <td>
+            <button class="btn btn-sm btn-primary" onclick="extendUser('${u.username}',7)">+7天</button>
+            <button class="btn btn-sm btn-primary" onclick="extendUser('${u.username}',30)">+30天</button>
+            <button class="btn btn-sm btn-secondary" onclick="setExpire('${u.username}')">设到期</button>
+            <button class="btn btn-sm btn-secondary" onclick="resetUser('${u.username}')">重置激活</button>
+            <button class="btn btn-sm btn-danger" onclick="toggleUser('${u.username}',${u.enabled?0:1})">${u.enabled?'禁用':'启用'}</button>
+          </td>
+        </tr>`).join('');
+    }
+
+    async function extendUser(username, days) {
+      const r = await fetch('/api/admin/user/extend', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, days }),
+      });
+      const d = await r.json();
+      showMsg(d.msg, d.ok);
+      if (d.ok) loadUsers();
+    }
+
+    async function setExpire(username) {
+      const val = prompt('输入到期时间（格式 2026-06-12 15:00:00）', '');
+      if (!val) return;
+      const r = await fetch('/api/admin/user/expire', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, expires_at: val }),
+      });
+      const d = await r.json();
+      showMsg(d.msg, d.ok);
+      if (d.ok) loadUsers();
+    }
+
+    async function resetUser(username) {
+      if (!confirm(`重置 ${username}？下次登录重新计算 7 天`)) return;
+      const r = await fetch('/api/admin/user/reset', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username }),
+      });
+      const d = await r.json();
+      showMsg(d.msg, d.ok);
+      if (d.ok) loadUsers();
+    }
+
+    async function toggleUser(username, enabled) {
+      const r = await fetch('/api/admin/user/toggle', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, enabled: !!enabled }),
+      });
+      const d = await r.json();
+      showMsg(d.msg, d.ok);
+      if (d.ok) loadUsers();
+    }
+
+    (async function init() {
+      const r = await fetch('/api/admin/users');
+      const d = await r.json();
+      if (d.ok) {
+        document.getElementById('loginCard').style.display = 'none';
+        document.getElementById('panelCard').style.display = 'block';
+        loadUsers();
+      }
+    })();
+  </script>
+</body>
+</html>

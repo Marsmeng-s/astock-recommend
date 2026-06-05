@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: astock-recommend-mobile
+    runtime: docker
+    plan: free
+    healthCheckPath: /
+    envVars:
+      - key: MOBILE_ONLY
+        value: "1"

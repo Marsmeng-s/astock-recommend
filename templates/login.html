@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>登录 · A股智能推荐</title>
+  <style>
+    :root {
+      --bg: #0f1419; --card: #1a2332; --accent: #3b82f6;
+      --text: #e2e8f0; --muted: #94a3b8; --border: #2d3a4f; --warn: #f59e0b;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: var(--bg); color: var(--text);
+      min-height: 100vh; display: flex; align-items: center; justify-content: center;
+      padding: 20px;
+    }
+    .box {
+      width: 100%; max-width: 400px;
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 16px; padding: 28px 24px;
+    }
+    h1 { font-size: 1.35rem; text-align: center; margin-bottom: 8px; }
+    .sub { text-align: center; color: var(--muted); font-size: 0.85rem; margin-bottom: 24px; line-height: 1.5; }
+    label { display: block; font-size: 0.8rem; color: var(--muted); margin-bottom: 6px; }
+    input {
+      width: 100%; padding: 14px; margin-bottom: 16px;
+      border: 1px solid var(--border); border-radius: 10px;
+      background: var(--bg); color: var(--text); font-size: 1rem;
+    }
+    .btn {
+      width: 100%; padding: 16px; border: none; border-radius: 12px;
+      background: var(--accent); color: #fff; font-size: 1rem; font-weight: 600; cursor: pointer;
+    }
+    .btn:active { opacity: 0.85; }
+    .err {
+      background: rgba(239,68,68,.12); border: 1px solid #ef4444;
+      color: #fca5a5; padding: 10px 12px; border-radius: 8px;
+      font-size: 0.88rem; margin-bottom: 14px; display: none;
+    }
+    .hint { margin-top: 16px; font-size: 0.75rem; color: var(--muted); line-height: 1.6; text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h1>A股智能推荐</h1>
+    <p class="sub">请登录后使用<br>账号首次登录后 {{ valid_days }} 天内有效</p>
+    <div class="err" id="errBox"></div>
+    <form id="loginForm" onsubmit="doLogin(event)">
+      <label>账号</label>
+      <input id="username" name="username" autocomplete="username" required placeholder="例如 user001">
+      <label>密码</label>
+      <input id="password" name="password" type="password" autocomplete="current-password" required>
+      <button class="btn" type="submit" id="btnLogin">登录</button>
+    </form>
+    <p class="hint">首次登录即开始计时 · 过期请联系管理员续期</p>
+  </div>
+  <script>
+    async function doLogin(e) {
+      e.preventDefault();
+      const err = document.getElementById('errBox');
+      err.style.display = 'none';
+      document.getElementById('btnLogin').disabled = true;
+      try {
+        const r = await fetch('/api/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            username: document.getElementById('username').value.trim(),
+            password: document.getElementById('password').value,
+          }),
+        });
+        const d = await r.json();
+        if (!d.ok) {
+          err.textContent = d.msg || '登录失败';
+          err.style.display = 'block';
+          document.getElementById('btnLogin').disabled = false;
+          return;
+        }
+        location.href = '/';
+      } catch (ex) {
+        err.textContent = '网络错误，请重试';
+        err.style.display = 'block';
+        document.getElementById('btnLogin').disabled = false;
+      }
+    }
+  </script>
+</body>
+</html>

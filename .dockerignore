@@ -1,0 +1,12 @@
+dist/
+build/
+build_cache/
+output/
+logs/
+__pycache__/
+*.egg-info/
+.git/
+*.spec
+*.bat
+*.exe
+agent-tools/
