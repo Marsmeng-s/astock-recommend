@@ -9,7 +9,7 @@ COPY cloud_app.py web_app.py auth_store.py config.py paths.py screener.py data_f
 COPY templates/ templates/
 COPY static/ static/
 
-RUN chmod +x start.sh
+RUN chmod +x start.sh && sed -i 's/\r$//' start.sh
 
 ENV MOBILE_ONLY=1
 ENV PYTHONUNBUFFERED=1
