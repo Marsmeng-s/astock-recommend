@@ -58,12 +58,7 @@ app.config["PERMANENT_SESSION_LIFETIME"] = 86400 * 30
 
 _accounts_file = auth_store.init_database()
 if _accounts_file:
-    print(f"[AUTH] 已生成 {config.INITIAL_ACCOUNT_COUNT} 个账号，见文件: {_accounts_file}", flush=True)
-    try:
-        with open(_accounts_file, encoding="utf-8") as f:
-            print(f.read(), flush=True)
-    except OSError:
-        pass
+    print(f"[AUTH] 已生成 {config.INITIAL_ACCOUNT_COUNT} 个账号: {_accounts_file}", flush=True)
 
 _state = {
     "running": False,
@@ -213,6 +208,11 @@ def index():
     if not _current_user():
         return redirect(url_for("login_page"))
     return _render_app()
+
+
+@app.route("/health")
+def health():
+    return jsonify({"ok": True}), 200
 
 
 @app.route("/manifest.json")

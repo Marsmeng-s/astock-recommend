@@ -10,8 +10,7 @@ COPY templates/ templates/
 COPY static/ static/
 
 ENV MOBILE_ONLY=1
-ENV PORT=10000
 
 EXPOSE 10000
 
-CMD gunicorn --bind 0.0.0.0:${PORT} --workers 1 --threads 4 --timeout 180 cloud_app:app
+CMD ["sh", "-c", "gunicorn --bind 0.0.0.0:${PORT:-10000} --workers 1 --threads 4 --timeout 180 --access-logfile - cloud_app:app"]

@@ -3,7 +3,7 @@ services:
     name: astock-recommend-mobile
     runtime: docker
     plan: free
-    healthCheckPath: /login
+    healthCheckPath: /health
     envVars:
       - key: MOBILE_ONLY
         value: "1"

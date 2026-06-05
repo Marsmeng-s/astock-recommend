@@ -10,10 +10,10 @@ def is_frozen() -> bool:
 
 
 def app_dir() -> str:
-    """数据目录：exe 同目录，或便携包根目录"""
+    """数据目录：exe 同目录，或项目根目录"""
     if is_frozen():
         return os.path.dirname(os.path.abspath(sys.executable))
-    return os.getcwd()
+    return os.path.dirname(os.path.abspath(__file__))
 
 
 def resource_dir() -> str:
