@@ -9,7 +9,7 @@ MIN_CHANGE_PCT = 0.0
 MIN_STOCK_PRICE = 10.0   # 股价不低于 10 元
 
 # 页面版本号（便于确认是否加载最新代码）
-APP_VERSION = "20250606-2"
+APP_VERSION = "20250606-3"
 
 # 涨速初筛：只取前 20 只，不符合则刷新重筛
 TOP_BY_SPEED = 20

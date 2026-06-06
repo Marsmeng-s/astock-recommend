@@ -34,14 +34,6 @@
       padding: 16px 0 8px;
     }
     .header h1 { font-size: 1.35rem; font-weight: 700; }
-    .user-bar {
-      display: flex; justify-content: space-between; align-items: center;
-      background: var(--card); border: 1px solid var(--border);
-      border-radius: 12px; padding: 10px 14px; margin: 10px 0;
-      font-size: 0.78rem; color: var(--muted);
-    }
-    .user-bar strong { color: var(--text); }
-    .link-btn { background: none; border: none; color: var(--accent); font-size: 0.78rem; }
     .badge {
       display: inline-block;
       margin-top: 8px;
@@ -176,15 +168,6 @@
     <div class="badge">手机版 · 云端运行</div>
   </div>
 
-  {% if user %}
-  <div class="user-bar">
-    <span><strong>{{ user.username }}</strong>
-      {% if user.expires_at %} · {{ user.expires_at[:10] }}到期{% endif %}
-    </span>
-    <button class="link-btn" onclick="logout()">退出</button>
-  </div>
-  {% endif %}
-
   <div class="tip">
     <strong>操作建议</strong>
     {{ trade_tip }}。{{ screen_tip }}。
@@ -213,20 +196,6 @@
   <script>
     let polling = null;
     let watchdog = null;
-    const fetchOpts = { credentials: 'same-origin' };
-
-    function authRedirect(r, d) {
-      if (r.status === 401 || (d && d.auth === false)) {
-        location.href = '/login';
-        return true;
-      }
-      return false;
-    }
-
-    async function logout() {
-      await fetch('/api/logout', { method: 'POST' });
-      location.href = '/login';
-    }
 
     function setStatus(msg, loading) {
       document.getElementById('statusMsg').innerHTML =
@@ -274,13 +243,12 @@
 
     async function poll() {
       try {
-        const r = await fetch('/api/status', fetchOpts);
-        if (!r.ok && r.status !== 401) {
+        const r = await fetch('/api/status');
+        if (!r.ok) {
           setStatus(`服务响应异常(${r.status})，请稍后刷新`);
           return;
         }
         const s = await r.json();
-        if (authRedirect(r, s)) return;
         setStatus(s.message, s.running);
         renderProgress(s.progress);
         if (s.result) renderResults(s.result);
@@ -308,9 +276,8 @@
         }
       }, 15000);
       try {
-        const r = await fetch('/api/start', { method: 'POST', ...fetchOpts });
+        const r = await fetch('/api/start', { method: 'POST' });
         const d = await r.json();
-        if (authRedirect(r, d)) return;
         if (!d.ok) {
           setStatus(d.msg);
           document.getElementById('btnStart').disabled = false;
@@ -331,9 +298,8 @@
       document.getElementById('btnNet').disabled = true;
       setStatus('测试连接...', true);
       try {
-        const r = await fetch('/api/network', fetchOpts);
+        const r = await fetch('/api/network');
         const d = await r.json();
-        if (authRedirect(r, d)) return;
         setStatus(d.ok ? '✓ ' + d.msg : '✗ ' + d.msg);
       } catch (e) {
         setStatus('连接失败');

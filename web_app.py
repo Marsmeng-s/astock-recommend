@@ -91,9 +91,21 @@ def _current_user() -> str | None:
     return username
 
 
+def _is_mobile_client() -> bool:
+    ua = request.headers.get("User-Agent", "").lower()
+    return any(k in ua for k in ("iphone", "android", "mobile", "ipad"))
+
+
+def _is_mobile_mode() -> bool:
+    """手机版/云端：免登录"""
+    return os.environ.get("MOBILE_ONLY") == "1" or _is_mobile_client()
+
+
 def login_required(f):
     @wraps(f)
     def wrapped(*args, **kwargs):
+        if _is_mobile_mode():
+            return f(*args, **kwargs)
         if not _current_user():
             return jsonify({"ok": False, "msg": "请先登录", "auth": False}), 401
         return f(*args, **kwargs)
@@ -193,15 +205,10 @@ def _run_job() -> None:
             _state["running"] = False
 
 
-def _is_mobile_client() -> bool:
-    ua = request.headers.get("User-Agent", "").lower()
-    return any(k in ua for k in ("iphone", "android", "mobile", "ipad"))
-
-
 def _render_app():
-    mobile_mode = os.environ.get("MOBILE_ONLY") == "1" or _is_mobile_client()
+    mobile_mode = _is_mobile_mode()
     template = "mobile.html" if mobile_mode else "index.html"
-    user = auth_store.get_user(_current_user()) if _current_user() else None
+    user = None if mobile_mode else (auth_store.get_user(_current_user()) if _current_user() else None)
     return render_template(
         template,
         trade_tip=config.TRADE_TIP,
@@ -215,6 +222,8 @@ def _render_app():
 
 @app.route("/login")
 def login_page():
+    if _is_mobile_mode():
+        return redirect(url_for("index"))
     if _current_user():
         return redirect(url_for("index"))
     return render_template("login.html", valid_days=config.ACCOUNT_VALID_DAYS)
@@ -227,7 +236,7 @@ def admin_page():
 
 @app.route("/")
 def index():
-    if not _current_user():
+    if not _is_mobile_mode() and not _current_user():
         return redirect(url_for("login_page"))
     return _render_app()
 
