@@ -13,7 +13,7 @@ import webbrowser
 from datetime import datetime
 from functools import wraps
 
-from flask import Flask, jsonify, redirect, render_template, request, session, send_from_directory, url_for
+from flask import Flask, jsonify, redirect, render_template, request, session, send_from_directory, url_for, Response
 
 import auth_store
 import config
@@ -38,7 +38,7 @@ app.jinja_env.auto_reload = True
 
 
 def _load_secret_key() -> str:
-    secret_path = os.path.join(paths.app_dir(), config.SESSION_SECRET_FILE)
+    secret_path = config.SESSION_SECRET_FILE
     os.makedirs(os.path.dirname(secret_path), exist_ok=True)
     if os.path.isfile(secret_path):
         with open(secret_path, encoding="utf-8") as f:
@@ -56,8 +56,9 @@ app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["PERMANENT_SESSION_LIFETIME"] = 86400 * 30
 
 _accounts_file = auth_store.init_database()
+print(f"[AUTH] 数据目录: {config.DATA_DIR} · 已有 {auth_store.user_count()} 个账号", flush=True)
 if _accounts_file:
-    print(f"[AUTH] 已生成 {config.INITIAL_ACCOUNT_COUNT} 个账号: {_accounts_file}", flush=True)
+    print(f"[AUTH] 已生成 {config.INITIAL_ACCOUNT_COUNT} 个新账号: {_accounts_file}", flush=True)
 
 
 def _warmup_screener() -> None:
@@ -415,6 +416,46 @@ def api_admin_password():
         "username": username,
         "password": password,
     })
+
+
+@app.route("/api/admin/info")
+@admin_required
+def api_admin_info():
+    return jsonify({
+        "ok": True,
+        "data_dir": auth_store.data_dir(),
+        "user_count": auth_store.user_count(),
+        "is_cloud": config.IS_CLOUD,
+        "persistent_hint": (
+            "Render 免费版重启/重新部署会清空账号。"
+            "请使用「备份账号库」保存，或升级 Starter 并挂载 Persistent Disk（DATA_DIR=/var/data）。"
+            if config.IS_CLOUD else "本地版账号保存在 data 目录，一般不会丢失。"
+        ),
+    })
+
+
+@app.route("/api/admin/backup")
+@admin_required
+def api_admin_backup():
+    data = auth_store.backup_database()
+    return Response(
+        data,
+        mimetype="application/octet-stream",
+        headers={"Content-Disposition": "attachment; filename=accounts_backup.db"},
+    )
+
+
+@app.route("/api/admin/restore", methods=["POST"])
+@admin_required
+def api_admin_restore():
+    file = request.files.get("file")
+    if not file:
+        return jsonify({"ok": False, "msg": "请选择 accounts_backup.db 文件"})
+    try:
+        auth_store.restore_database(file.read())
+    except ValueError as e:
+        return jsonify({"ok": False, "msg": str(e)})
+    return jsonify({"ok": True, "msg": f"已恢复 {auth_store.user_count()} 个账号"})
 
 
 def main() -> None:

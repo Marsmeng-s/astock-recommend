@@ -2,10 +2,16 @@ services:
   - type: web
     name: astock-recommend-mobile
     runtime: docker
-    plan: free
+    plan: starter          # 免费版无持久磁盘，账号会在重启后丢失；需 Starter
     healthCheckPath: /health
+    disk:
+      name: account-data
+      mountPath: /var/data
+      sizeGB: 1
     envVars:
       - key: MOBILE_ONLY
         value: "1"
+      - key: DATA_DIR
+        value: /var/data
       - key: ADMIN_PASSWORD
         generateValue: true

@@ -19,9 +19,15 @@ _conn: sqlite3.Connection | None = None
 
 
 def _db_path() -> str:
-    data_dir = os.path.join(paths.app_dir(), "data")
-    os.makedirs(data_dir, exist_ok=True)
-    return os.path.join(data_dir, "accounts.db")
+    os.makedirs(config.DATA_DIR, exist_ok=True)
+    return os.path.join(config.DATA_DIR, "accounts.db")
+
+
+def _reset_connection() -> None:
+    global _conn
+    if _conn is not None:
+        _conn.close()
+        _conn = None
 
 
 def _connect() -> sqlite3.Connection:
@@ -109,7 +115,7 @@ def init_database() -> str | None:
             credentials.append((username, password))
         conn.commit()
 
-        export_path = os.path.join(os.path.dirname(_db_path()), "initial_accounts.txt")
+        export_path = os.path.join(config.DATA_DIR, "initial_accounts.txt")
         with open(export_path, "w", encoding="utf-8") as f:
             f.write("A股智能推荐 · 初始账号（请妥善保管，首次登录后 7 天内有效）\n")
             f.write("=" * 56 + "\n\n")
@@ -272,3 +278,31 @@ def verify_admin(username: str, password: str) -> bool:
         username == config.ADMIN_USERNAME
         and password == config.ADMIN_PASSWORD
     )
+
+
+def data_dir() -> str:
+    return config.DATA_DIR
+
+
+def user_count() -> int:
+    with _lock:
+        return _connect().execute("SELECT COUNT(*) FROM users").fetchone()[0]
+
+
+def backup_database() -> bytes:
+    with _lock:
+        _connect().commit()
+        path = _db_path()
+    with open(path, "rb") as f:
+        return f.read()
+
+
+def restore_database(data: bytes) -> None:
+    if not data.startswith(b"SQLite format 3"):
+        raise ValueError("不是有效的 SQLite 账号库文件")
+    with _lock:
+        _reset_connection()
+        path = _db_path()
+        with open(path, "wb") as f:
+            f.write(data)
+        _connect()

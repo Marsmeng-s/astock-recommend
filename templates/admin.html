@@ -62,9 +62,14 @@
     </div>
 
     <div class="card" id="panelCard" style="display:none;">
+      <div id="persistWarn" style="display:none;background:rgba(245,158,11,.12);border:1px solid var(--warn);border-radius:8px;padding:12px;margin-bottom:12px;font-size:0.85rem;line-height:1.6;color:#fcd34d;"></div>
       <div class="toolbar">
         <button class="btn btn-secondary" onclick="adminLogout()">退出管理</button>
         <button class="btn btn-primary" onclick="loadUsers()">刷新列表</button>
+        <button class="btn btn-secondary" onclick="downloadBackup()">备份账号库</button>
+        <label class="btn btn-secondary" style="cursor:pointer;display:inline-block;">
+          恢复账号库<input type="file" id="restoreFile" accept=".db" style="display:none" onchange="restoreBackup(this)">
+        </label>
         <span style="color:var(--muted);font-size:0.85rem;" id="userCount"></span>
       </div>
       <div style="overflow-x:auto;">
@@ -119,6 +124,17 @@
     }
 
     async function loadUsers() {
+      const infoR = await fetch('/api/admin/info');
+      const info = await infoR.json();
+      if (info.ok) {
+        document.getElementById('userCount').textContent =
+          `共 ${info.user_count} 个账号 · 存储: ${info.data_dir}`;
+        if (info.is_cloud) {
+          const w = document.getElementById('persistWarn');
+          w.style.display = 'block';
+          w.textContent = info.persistent_hint;
+        }
+      }
       const r = await fetch('/api/admin/users');
       const d = await r.json();
       if (!d.ok) {
@@ -193,6 +209,23 @@
         alert(`新密码已设置\n账号: ${d.username}\n密码: ${d.password}\n请复制保存`);
       }
       showMsg(d.msg, d.ok);
+    }
+
+    function downloadBackup() {
+      window.location.href = '/api/admin/backup';
+    }
+
+    async function restoreBackup(input) {
+      const file = input.files[0];
+      if (!file) return;
+      if (!confirm('恢复将覆盖当前全部账号设置，确定吗？')) { input.value = ''; return; }
+      const fd = new FormData();
+      fd.append('file', file);
+      const r = await fetch('/api/admin/restore', { method: 'POST', body: fd });
+      const d = await r.json();
+      showMsg(d.msg, d.ok);
+      input.value = '';
+      if (d.ok) loadUsers();
     }
 
     async function toggleUser(username, enabled) {

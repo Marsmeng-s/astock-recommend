@@ -9,7 +9,7 @@ MIN_CHANGE_PCT = 0.0
 MIN_STOCK_PRICE = 10.0   # 股价不低于 10 元
 
 # 页面版本号（便于确认是否加载最新代码）
-APP_VERSION = "20250606-1"
+APP_VERSION = "20250606-2"
 
 # 涨速初筛：只取前 20 只，不符合则刷新重筛
 TOP_BY_SPEED = 20
@@ -58,10 +58,13 @@ SCREEN_TIP = "建议 14:35 左右点击检索，通常 3-8 分钟内完成"
 LOG_DIR = "logs"
 OUTPUT_DIR = "output"
 
+# 账号数据目录（Render 请挂载 Persistent Disk 并设 DATA_DIR=/var/data）
+DATA_DIR = os.environ.get("DATA_DIR", os.path.join(os.path.dirname(os.path.abspath(__file__)), "data"))
+
 # 账号登录
 INITIAL_ACCOUNT_COUNT = 50
 ACCOUNT_PREFIX = "user"
 ACCOUNT_VALID_DAYS = 7          # 首次登录后有效天数
 ADMIN_USERNAME = "admin"
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "Admin@2025")  # 云端请在 Render 环境变量设置
-SESSION_SECRET_FILE = "data/.session_secret"
+SESSION_SECRET_FILE = os.path.join(DATA_DIR, ".session_secret")
